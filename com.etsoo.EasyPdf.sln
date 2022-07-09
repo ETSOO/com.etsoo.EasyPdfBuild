@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30711.63
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32526.322
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "com.etsoo.EasyPdf", "com.etsoo.EasyPdf\com.etsoo.EasyPdf.csproj", "{2387FC0C-61CD-4369-A72F-7109C9A46BF7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "com.etsoo.EasyPdf", "com.etsoo.EasyPdf\com.etsoo.EasyPdf.csproj", "{2387FC0C-61CD-4369-A72F-7109C9A46BF7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "TestProject1\TestProject1.csproj", "{2F3B5C92-39E5-4D4E-B65B-B220248D0BD1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{2387FC0C-61CD-4369-A72F-7109C9A46BF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2387FC0C-61CD-4369-A72F-7109C9A46BF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2387FC0C-61CD-4369-A72F-7109C9A46BF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F3B5C92-39E5-4D4E-B65B-B220248D0BD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F3B5C92-39E5-4D4E-B65B-B220248D0BD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F3B5C92-39E5-4D4E-B65B-B220248D0BD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F3B5C92-39E5-4D4E-B65B-B220248D0BD1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
