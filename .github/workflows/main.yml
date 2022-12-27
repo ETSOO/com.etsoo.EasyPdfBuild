@@ -15,11 +15,11 @@ jobs:
           include-prerelease: true
 
       # Publish com.etsoo.Pdf
-      - name: Publish com.etsoo.PdfBuild on version change
+      - name: Publish com.etsoo.EasyPdfBuild on version change
         uses: alirezanet/publish-nuget@v3.0.4
         with:
           # Filepath of the project to be packaged, relative to root of repository
-          PROJECT_FILE_PATH: com.etsoo.PdfBuild/com.etsoo.PdfBuild.csproj
+          PROJECT_FILE_PATH: com.etsoo.EasyPdfBuild/com.etsoo.EasyPdfBuild.csproj
 
           # API key to authenticate with NuGet server
           NUGET_KEY: ${{secrets.ETSOONugetKey}}
