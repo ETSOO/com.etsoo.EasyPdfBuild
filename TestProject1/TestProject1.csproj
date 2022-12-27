@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\com.etsoo.EasyPdf\com.etsoo.EasyPdf.csproj" />
+    <ProjectReference Include="..\com.etsoo.EasyPdfBuild\com.etsoo.EasyPdfBuild.csproj" />
   </ItemGroup>
 
   <ItemGroup>

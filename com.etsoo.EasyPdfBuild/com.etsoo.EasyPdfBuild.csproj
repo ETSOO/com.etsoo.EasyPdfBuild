@@ -7,15 +7,15 @@
 	<SignAssembly>true</SignAssembly>
 	<AssemblyOriginatorKeyFile>..\etsoo.snk</AssemblyOriginatorKeyFile>
 	<PackageProjectUrl>https://www.etsoo.com/SmartERP/</PackageProjectUrl>
-	<RepositoryType>GitHub</RepositoryType>
-	<RepositoryUrl>https://github.com/ETSOO/com.etsoo.EasyPdf</RepositoryUrl>
+	<RepositoryType></RepositoryType>
+	<RepositoryUrl>https://github.com/ETSOO/com.etsoo.EasyPdfBuild</RepositoryUrl>
 	<Authors>ETSOO SmartERP NextGen Team</Authors>
-	<Company>ETSOO</Company>
+	<Company>ETSOO / 亿速思维</Company>
 	<Copyright>Copyright © ETSOO 2004 - 2022</Copyright>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
-	<Description>ETSOO SmartERP Pdf Library</Description>
+	<Description>ETSOO SmartERP Build Pdf Library</Description>
 	<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-	<Version>1.0.2</Version>
+	<Version>1.0.3</Version>
 	<AssemblyVersion>1.0.1.0</AssemblyVersion>
 	<FileVersion>1.0.1.0</FileVersion>
 	<PackageIcon>logo.png</PackageIcon>
