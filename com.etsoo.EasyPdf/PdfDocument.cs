@@ -1,4 +1,5 @@
 ﻿using com.etsoo.EasyPdf.Dto;
+using com.etsoo.EasyPdf.Fonts;
 using com.etsoo.EasyPdf.Objects;
 using com.etsoo.EasyPdf.Types;
 
@@ -13,7 +14,7 @@ namespace com.etsoo.EasyPdf
     /// 3. A cross-reference table containing information about the indirect objects in the file.
     /// 4. A trailer giving the location of the cross-reference table and of certain special objects within the body of the file.
     /// </summary>
-    public class PdfDocument
+    public class PdfDocument : IPdfDocument
     {
         private readonly Stream stream;
         private readonly bool keepOpen;
@@ -36,6 +37,12 @@ namespace com.etsoo.EasyPdf
         /// 文档信息
         /// </summary>
         public PdfDocInfo DocInfo { get; } = new();
+
+        /// <summary>
+        /// Fonts collection
+        /// 字体集合
+        /// </summary>
+        public PdfFontCollection Fonts { get; } = new();
 
         /// <summary>
         /// Constructor
@@ -70,13 +77,7 @@ namespace com.etsoo.EasyPdf
                 await binarCheck.WriteToAsync(stream);
 
                 // Writer
-                writer = new PdfWriter(stream, PageData);
-
-                // Document information
-                await writer.WriteDocInfoAsync(DocInfo);
-
-                // First page
-                await writer.NewPageAsync();
+                writer = new PdfWriter(this, stream);
             }
 
             return writer;

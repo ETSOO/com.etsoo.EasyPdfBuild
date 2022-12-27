@@ -1,17 +1,6 @@
 ﻿namespace com.etsoo.EasyPdf.Content
 {
     /// <summary>
-    /// PDF font style
-    /// PDF 字体样式
-    /// </summary>
-    public enum PdfFontStyle
-    {
-        Normal,
-        Bold,
-        Italic
-    }
-
-    /// <summary>
     /// PDF line style
     /// PDF 线条样式
     /// </summary>
@@ -60,6 +49,34 @@
         /// 厚度
         /// </summary>
         public ushort Thickness { get; set; }
+    }
+
+    /// <summary>
+    /// The font styles
+    /// 字体样式
+    /// </summary>
+    [Flags]
+    public enum PdfFontStyle
+    {
+        /// <summary>
+        /// Regular
+        /// </summary>
+        Regular = 0,
+
+        /// <summary>
+        /// Bold
+        /// </summary>
+        Bold = 1,
+
+        /// <summary>
+        /// Italic
+        /// </summary>
+        Italic = 2,
+
+        /// <summary>
+        /// Bold and Italic
+        /// </summary>
+        BoldItalic = 3
     }
 
     /// <summary>

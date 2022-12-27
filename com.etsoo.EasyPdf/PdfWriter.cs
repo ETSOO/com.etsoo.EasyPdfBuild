@@ -11,9 +11,10 @@ namespace com.etsoo.EasyPdf
     /// PDF content writer
     /// PDF 内容编写器
     /// </summary>
-    public class PdfWriter : IAsyncDisposable
+    public class PdfWriter : IPdfWriter
     {
         private readonly SortedDictionary<ushort, PdfReference> refs = new() { [0] = new PdfReference(0, 65535, true) };
+
         private readonly Stream stream;
         private readonly PdfPageTree pageTree;
 
@@ -22,21 +23,26 @@ namespace com.etsoo.EasyPdf
         private ushort objIndex = 0;
         private PdfPage? currentPage;
         private PdfObject? dicInfoObj;
-        private PdfObject? fontObj;
-        private string? language;
+
+        /// <summary>
+        /// Document
+        /// 文档对象
+        /// </summary>
+        public IPdfDocument Document { get; }
 
         /// <summary>
         /// Constructor
         /// 构造函数
         /// </summary>
+        /// <param name="document">Document interface</param>
         /// <param name="saveStream">Save stream</param>
-        /// <param name="pageData">Page data</param>
-        public PdfWriter(Stream saveStream, PdfPageData pageData)
+        public PdfWriter(IPdfDocument document, Stream saveStream)
         {
+            Document = document;
             stream = saveStream;
 
             var obj = CreateObj();
-            pageTree = new PdfPageTree(obj, pageData);
+            pageTree = new PdfPageTree(obj, document.PageData);
         }
 
         /// <summary>
@@ -82,31 +88,20 @@ namespace com.etsoo.EasyPdf
         }
 
         /// <summary>
-        /// Write document information
-        /// 输出文档信息
-        /// </summary>
-        /// <param name="info">Information</param>
-        /// <returns>Task</returns>
-        public async Task WriteDocInfoAsync(PdfDocInfo info)
-        {
-            dicInfoObj = await WriteDicAsync(info);
-
-            // Default font
-            language = info.Language;
-
-            var font = PdfFont1.Create();
-            fontObj = await WriteDicAsync(font);
-        }
-
-        /// <summary>
-        /// Start a new page, first page is implicitly created
-        /// 开始一个新页面，第一页是隐式创建的
+        /// Start a new page
+        /// 开始一个新页面
         /// </summary>
         /// <param name="data">Page data</param>
         /// <returns>Task</returns>
         public async Task NewPageAsync(PdfReadonlyPageData? data = null)
         {
-            if (currentPage != null)
+            if (currentPage is null)
+            {
+                // First page
+                // Document information
+                dicInfoObj = await WriteDicAsync(Document.DocInfo);
+            }
+            else
             {
                 await WritePageAsync(currentPage);
             }
@@ -117,9 +112,6 @@ namespace com.etsoo.EasyPdf
             // Create a new page
             currentPage = new PdfPage(CreateObj(), pageTree, data);
             await currentPage.PrepareAsync();
-
-            // Default font
-            currentPage.Resources.Font.Add("F0", fontObj!);
         }
 
         /// <summary>
@@ -130,10 +122,35 @@ namespace com.etsoo.EasyPdf
         /// <returns>Task</returns>
         public async Task AddAsync(PdfBlock p)
         {
-            if (await currentPage!.WriteAsync(p))
+            if (await currentPage!.WriteAsync(p, this))
             {
                 await NewPageAsync(currentPage.Data);
             }
+        }
+
+        /// <summary>
+        /// Create font
+        /// 创建字体
+        /// </summary>
+        /// <param name="familyName">Family name</param>
+        /// <param name="size">Size</param>
+        /// <param name="style">Style</param>
+        /// <returns>Font</returns>
+        public IPdfFont CreateFont(string familyName, float size, PdfFontStyle style = PdfFontStyle.Regular)
+        {
+            var font = Document.Fonts.CreateFont(familyName, size, style);
+
+            if (font.ObjRef == null)
+            {
+                // First time creation
+                font.ObjRef = CreateObj();
+
+                // Add to current page
+                if (currentPage != null)
+                    currentPage.Resources.Font[font.RefName] = font.ObjRef.AsRef();
+            }
+
+            return font;
         }
 
         private async Task WritePageAsync(PdfPage page)
@@ -191,8 +208,11 @@ namespace com.etsoo.EasyPdf
             await WriteDicAsync(pageTree);
 
             // catalog / root
-            var catalog = new PdfCatalog(pageTree.Obj.AsRef()) { Lang = language };
+            var catalog = new PdfCatalog(pageTree.Obj.AsRef()) { Lang = Document.DocInfo.Culture?.TwoLetterISOLanguageName };
             var catalogObj = await WriteDicAsync(catalog);
+
+            // All fonts
+            await Document.Fonts.WriteAsyc(this);
 
             // startxref
             var startxref = (int)stream.Position;
@@ -213,6 +233,8 @@ namespace com.etsoo.EasyPdf
 
             // Update flag
             disposed = true;
+
+            GC.SuppressFinalize(this);
         }
     }
 }

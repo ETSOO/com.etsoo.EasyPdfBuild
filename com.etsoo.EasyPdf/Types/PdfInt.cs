@@ -18,7 +18,6 @@ namespace com.etsoo.EasyPdf.Types
             }
             else
             {
-                // Long int
                 if (!int.TryParse(str, out var i)) i = 0;
                 return new PdfInt(i);
             }

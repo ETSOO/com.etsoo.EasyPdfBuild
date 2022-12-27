@@ -24,13 +24,23 @@ namespace com.etsoo.EasyPdf.Types
 
         public async Task WriteToAsync(Stream stream)
         {
+            await WriteToAsync(stream, true);
+        }
+
+        public async Task WriteToAsync(Stream stream, bool withPreamble)
+        {
             // Encoding
             var encoding = TextEncoding ?? PdfEncoding.UTF16;
 
             await Task.CompletedTask;
 
             // Hexadecimal strings;
-            var bytes = encoding.GetPreamble().Concat(encoding.GetBytes(Value)).ToArray();
+            var bytes = encoding.GetBytes(Value);
+            if (withPreamble)
+            {
+                bytes = encoding.GetPreamble().Concat(bytes).ToArray();
+            }
+
             stream.WriteByte(PdfConstants.LessThanSignByte);
             stream.Write(new ASCIIHexFilter().Encode(bytes));
             stream.WriteByte(PdfConstants.GreaterThanSignByte);

@@ -27,10 +27,6 @@ namespace com.etsoo.EasyPdf.Objects
 
         public Dictionary<string, PdfObject> Font { get; } = new Dictionary<string, PdfObject>();
 
-        public PdfPageResource() : base(new Dictionary<IPdfType, IPdfType>())
-        {
-        }
-
         public override Task WriteToAsync(Stream stream)
         {
             if (XObject.Any())

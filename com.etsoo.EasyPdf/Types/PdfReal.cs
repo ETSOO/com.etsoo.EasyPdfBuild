@@ -3,11 +3,19 @@
 namespace com.etsoo.EasyPdf.Types
 {
     /// <summary>
-    /// PDF real, local decimal applied
-    /// PDF 实数，本地用 decimal 实现
+    /// PDF real
+    /// PDF 实数
     /// </summary>
     internal record PdfReal(decimal Value) : IPdfType<decimal>
     {
+        public PdfReal(float value) : this(Convert.ToDecimal(value))
+        {
+        }
+
+        public PdfReal(double value) : this(Convert.ToDecimal(value))
+        {
+        }
+
         public bool KeyEquals(string item)
         {
             return false;

@@ -1,8 +1,15 @@
-﻿using com.etsoo.EasyPdf.Types;
+﻿using com.etsoo.EasyPdf.Filters;
+using com.etsoo.EasyPdf.Types;
 using System.Text;
 
 namespace com.etsoo.EasyPdf.Objects
 {
+    public enum PdfStreamFilter
+    {
+        None,
+        FlateDecode
+    }
+
     public class PdfStreamDic : PdfObjectDic
     {
         /// <summary>
@@ -20,6 +27,12 @@ namespace com.etsoo.EasyPdf.Objects
         /// 流字节
         /// </summary>
         protected ReadOnlyMemory<byte> Bytes { get; }
+
+        /// <summary>
+        /// Encode/decode filter
+        /// 编码/解码过滤器
+        /// </summary>
+        public PdfStreamFilter Filter { get; init; } = PdfStreamFilter.None;
 
         /// <summary>
         /// Constructor
@@ -58,6 +71,14 @@ namespace com.etsoo.EasyPdf.Objects
             Bytes = bytes;
         }
 
+        protected override void AddItems()
+        {
+            base.AddItems();
+
+            if (Filter != PdfStreamFilter.None)
+                Dic.AddNames(nameof(Filter), Filter.ToString());
+        }
+
         protected override async Task WriteOthersAsync(Stream stream)
         {
             // Add a white-space
@@ -67,7 +88,17 @@ namespace com.etsoo.EasyPdf.Objects
             await stream.WriteAsync(streamBytes);
             stream.WriteByte(PdfConstants.LineFeedByte);
 
-            await stream.WriteAsync(Bytes);
+            if (Filter == PdfStreamFilter.FlateDecode)
+            {
+                var filter = new FlateFilter();
+                await using var result = await filter.EncodeAsync(Bytes);
+                result.Position = 0;
+                await result.CopyToAsync(stream);
+            }
+            else
+            {
+                await stream.WriteAsync(Bytes);
+            }
 
             stream.WriteByte(PdfConstants.LineFeedByte);
             await stream.WriteAsync(endstreamBytes);

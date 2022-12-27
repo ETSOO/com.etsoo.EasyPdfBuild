@@ -1,5 +1,6 @@
 ﻿using com.etsoo.EasyPdf.Content;
 using com.etsoo.EasyPdf.Dto;
+using com.etsoo.EasyPdf.Fonts;
 using com.etsoo.EasyPdf.Support;
 using com.etsoo.EasyPdf.Types;
 using System.Drawing;
@@ -39,7 +40,6 @@ namespace com.etsoo.EasyPdf.Objects
 
         private readonly string defaultFont;
         private readonly float defaultFontSize;
-        private readonly float defaultSpace;
 
         /// <summary>
         /// Constructor
@@ -59,9 +59,8 @@ namespace com.etsoo.EasyPdf.Objects
             pageSize = data.PageSize ?? parent.PageData.PageSize ?? PdfPageSize.A4;
             space = data.Margin ?? parent.PageData.Margin ?? new PdfStyleSpace(60);
 
-            defaultFont = data.Font ?? parent.PageData.Font ?? "A0";
+            defaultFont = data.Font ?? parent.PageData.Font ?? "Arial";
             defaultFontSize = data.FontSize ?? parent.PageData.FontSize ?? 12;
-            defaultSpace = defaultFontSize * 0.2f;
         }
 
         /*
@@ -121,6 +120,26 @@ namespace com.etsoo.EasyPdf.Objects
             await Stream.WriteAsync(PdfOperator.Td(CalculatePoint(lastPoint.Value)));
         }
 
+        private bool gStateSaved;
+
+        // Restore graphics state
+        private void RestoreGState()
+        {
+            if (gStateSaved)
+            {
+                Stream.Write(PdfOperator.Q);
+
+                gStateSaved = false;
+            }
+        }
+
+        // Save graphics state
+        private void SaveGState()
+        {
+            Stream.Write(PdfOperator.q);
+            gStateSaved = true;
+        }
+
         public async Task WriteEndAsync()
         {
             await Stream.WriteAsync(PdfOperator.ET);
@@ -129,45 +148,73 @@ namespace com.etsoo.EasyPdf.Objects
             Stream.Position = 0;
         }
 
-        public async Task<bool> WriteAsync(PdfBlock block)
+        public async Task<bool> WriteAsync(PdfBlock block, IPdfWriter writer)
         {
-            // Font style
+            // Style
             var baseStyle = block.Style;
             baseStyle.Font ??= defaultFont;
             baseStyle.FontSize ??= defaultFontSize;
-            await Stream.WriteAsync(PdfOperator.Tf(baseStyle.Font, baseStyle.FontSize.Value));
-
-            // Leading
-            // var leading = defaultSize + block.Style.Margin.Top;
-            await Stream.WriteAsync(PdfOperator.TL(defaultFontSize + defaultSpace));
-
-            // Color
-            if (baseStyle.Color.HasValue)
-            {
-                await Stream.WriteAsync(PdfOperator.RG2(baseStyle.Color.Value));
-            }
 
             // Last style
             var lastStyle = baseStyle with { };
 
-            foreach (var chunk in block.Chunks)
+            // Current font
+            IPdfFont currentFont = default!;
+
+            // Artificial draw
+            var artificialDraw = false;
+
+            for (var c = 0; c < block.Chunks.Count; c++)
             {
+                var chunk = block.Chunks[c];
+
                 // Font & size
-                bool newFont = false;
+                bool fontCreated = false;
                 var font = chunk.Style.Font ?? lastStyle.Font ?? baseStyle.Font ?? defaultFont;
                 var fontSize = chunk.Style.FontSize ?? lastStyle.FontSize ?? baseStyle.FontSize ?? defaultFontSize;
-                if (!font.Equals(lastStyle.Font) || !fontSize.Equals(lastStyle.FontSize))
+                var fontStyle = chunk.Style.FontStyle ?? baseStyle.FontStyle ?? PdfFontStyle.Regular;
+                if (c == 0 || !font.Equals(lastStyle.Font) || !fontSize.Equals(lastStyle.FontSize) || !fontStyle.Equals(lastStyle.FontStyle))
                 {
-                    newFont = true;
-                    await Stream.WriteAsync(PdfOperator.Tf(font, fontSize));
-                    await Stream.WriteAsync(PdfOperator.TL(fontSize + defaultSpace));
+                    var newFont = writer.CreateFont(font, fontSize, fontStyle);
+                    if (!newFont.Equals(currentFont))
+                    {
+                        currentFont = newFont;
+                        fontCreated = true;
+
+                        await Stream.WriteAsync(PdfOperator.Tf(currentFont.RefName, fontSize));
+                        await Stream.WriteAsync(PdfOperator.TL(fontSize + currentFont.LineGap));
+                    }
                 }
 
                 // Color
                 var color = chunk.Style.Color;
-                if (color.HasValue)
+                bool hasColor = false;
+                if (c == 0 || (hasColor = color.HasValue && !color.Equals(baseStyle.Color)))
                 {
-                    await Stream.WriteAsync(PdfOperator.RG2(color.Value));
+                    var chunkColor = chunk.Style.Color ?? baseStyle.Color;
+                    if (chunkColor.HasValue)
+                    {
+                        await Stream.WriteAsync(PdfOperator.RG2(chunkColor.Value));
+                    }
+                }
+
+                // Artificial draw style
+                if (!currentFont.IsMatch && fontStyle != PdfFontStyle.Regular)
+                {
+                    // When not match, always choose the normal font
+                    // SaveGState();
+                    artificialDraw = true;
+                    if (!lastStyle.FontStyle.HasValue || !lastStyle.FontStyle.Value.HasFlag(fontStyle))
+                    {
+                        SaveGState();
+                        await PdfOperator.SetupStyle(Stream, fontStyle, currentFont.Size);
+                    }
+                }
+                else if (artificialDraw)
+                {
+                    //await Stream.WriteAsync(PdfOperator.w(0));
+                    //artificialDraw = false;
+                    RestoreGState();
                 }
 
                 // Superscript or subscript
@@ -175,45 +222,35 @@ namespace com.etsoo.EasyPdf.Objects
                 float scriptDistance = 0;
                 if ((superscript = chunk.Style.TextStyle == PdfChunkTextStyle.SuperScript) || (chunk.Style.TextStyle == PdfChunkTextStyle.SubScript))
                 {
-                    var scriptFontSize = fontSize * 0.6f;
+                    var scriptItem = superscript ? currentFont.Superscript : currentFont.Subscript;
+                    var scriptFontSize = scriptItem.Size;
+                    scriptDistance = scriptItem.Offset;
 
-                    if (!newFont)
+                    if (!fontCreated)
                     {
-                        await Stream.WriteAsync(PdfOperator.Tf(font, scriptFontSize));
+                        // Script font
+                        currentFont = writer.CreateFont(font, scriptFontSize, fontStyle);
+                        await Stream.WriteAsync(PdfOperator.Tf(currentFont.RefName, scriptFontSize));
                     }
 
-                    scriptDistance = superscript ? fontSize - scriptFontSize * 0.9f : -scriptFontSize * 0.3f;
                     await Stream.WriteAsync(PdfOperator.Ts(scriptDistance));
 
                     lastStyle.Font = null;
                     lastStyle.FontSize = null;
+                    lastStyle.FontStyle = null;
                 }
                 else
                 {
                     lastStyle.Font = font;
                     lastStyle.FontSize = fontSize;
+                    lastStyle.FontStyle = fontStyle;
                 }
 
                 // Content
-                if (chunk.Content.Span.IsAllAscii())
-                {
-                    var content = new PdfString(chunk.Content.ToString());
-                    await content.WriteToAsync(Stream);
-                }
-                else
-                {
-                    var content = new PdfBinaryString(chunk.Content.ToString());
-                    await content.WriteToAsync(Stream);
-                }
+                await currentFont.WriteAsync(Stream, chunk);
 
-                if (chunk.NewLine)
-                {
-                    await Stream.WriteAsync(PdfOperator.SQ);
-                }
-                else
-                {
-                    await Stream.WriteAsync(PdfOperator.Tj);
-                }
+                // Restore graphics
+                // RestoreGState();
 
                 // Restore scripts
                 if (scriptDistance != 0)
@@ -223,7 +260,7 @@ namespace com.etsoo.EasyPdf.Objects
                 }
 
                 // Restore color
-                if (color.HasValue)
+                if (hasColor)
                 {
                     await Stream.WriteAsync(PdfOperator.RG2(PdfColor.Black));
                 }

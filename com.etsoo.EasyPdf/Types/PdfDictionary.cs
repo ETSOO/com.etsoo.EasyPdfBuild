@@ -20,6 +20,10 @@ namespace com.etsoo.EasyPdf.Types
             return new PdfDictionary(dic);
         }
 
+        public PdfDictionary() : this(new Dictionary<IPdfType, IPdfType>())
+        {
+        }
+
         public PdfDictionary(Dictionary<IPdfType, IPdfType> Value) : base(Value)
         {
         }
@@ -51,6 +55,18 @@ namespace com.etsoo.EasyPdf.Types
             AddNameItem(name, new PdfInt(value.Value));
         }
 
+        public void AddNameNum(string name, float? value)
+        {
+            if (!value.HasValue) return;
+            AddNameItem(name, new PdfReal(value.Value));
+        }
+
+        public void AddNameNum(string name, double? value)
+        {
+            if (!value.HasValue) return;
+            AddNameItem(name, new PdfReal(value.Value));
+        }
+
         public void AddNameArray(string name, IEnumerable<IPdfType>? items)
         {
             if (items == null) return;
@@ -74,6 +90,12 @@ namespace com.etsoo.EasyPdf.Types
         {
             if (rect == null) return;
             AddNameItem(name, new PdfRectangle(rect.Value));
+        }
+
+        public void AddNameRect(string name, RectangleF? rect)
+        {
+            if (rect == null) return;
+            AddNameItem(name, new PdfRectangleF(rect.Value));
         }
 
         public void AddNames(string name, string? value)

@@ -3,23 +3,30 @@ using com.etsoo.EasyPdf.Types;
 
 namespace com.etsoo.EasyPdf.Fonts
 {
-    /// <summary>
-    /// PDF font
-    /// PDF 字体
-    /// </summary>
-    internal class PdfFont : IPdfFont
+    internal class PdfStandardFont : IPdfFont
     {
-        /// <summary>
-        /// Base font
-        /// 基础字体
-        /// </summary>
-        public IPdfBaseFont BaseFont { get; }
+        public const string Helvetica = "Helvetica";
+        public const string Times = "Times New Roman";
+        public const string Courier = "Courier New";
+
+        // All standards Type1 fonts (Symbol and ZapfDingbats not included)
+        public static readonly string[][] Fonts = new[] {
+            new[]{ Helvetica, "Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique" },
+            new[]{ Times, "Times Roman", "Times-Bold", "Times-Italic", "Times-BoldItalic" },
+            new[]{ Courier, "Courier", "Courier-Bold", "Courier-Oblique", "Courier-BoldOblique" }
+        };
 
         /// <summary>
         /// Is match the style
         /// 是否匹配样式
         /// </summary>
-        public bool IsMatch { get; }
+        public bool IsMatch { get; } = true;
+
+        /// <summary>
+        /// Base font
+        /// 基础字体
+        /// </summary>
+        public string BaseFont { get; }
 
         /// <summary>
         /// Size
@@ -49,7 +56,7 @@ namespace com.etsoo.EasyPdf.Fonts
         /// Line gap
         /// 行间距
         /// </summary>
-        public float LineGap => BaseFont.GetLineGap(Size);
+        public float LineGap => PdfFontUtils.GetLineGap(Size);
 
         /// <summary>
         /// Subscript size and offset
@@ -57,7 +64,7 @@ namespace com.etsoo.EasyPdf.Fonts
         /// </summary>
         /// <param name="size">Font size</param>
         /// <returns>Result</returns>
-        public PdfSizeAndOffset Subscript => BaseFont.GetSubscript(Size);
+        public PdfSizeAndOffset Subscript => PdfFontUtils.GetSubscript(Size);
 
         /// <summary>
         /// Superscript size and offset
@@ -65,10 +72,7 @@ namespace com.etsoo.EasyPdf.Fonts
         /// </summary>
         /// <param name="size">Font size</param>
         /// <returns>Result</returns>
-        public PdfSizeAndOffset Superscript => BaseFont.GetSuperscript(Size);
-
-        // Character to Glyph Index Mapping Table for the font
-        private readonly Dictionary<int, (int GlyphId, float Width, int FWidth)> cmap = new();
+        public PdfSizeAndOffset Superscript => PdfFontUtils.GetSuperscript(Size);
 
         /// <summary>
         /// Constructor
@@ -78,23 +82,12 @@ namespace com.etsoo.EasyPdf.Fonts
         /// <param name="size">Font size</param>
         /// <param name="style">Font style</param>
         /// <param name="refName">Ref name</param>
-        public PdfFont(IPdfBaseFont baseFont, bool isMatch, float size, PdfFontStyle style, string refName)
+        public PdfStandardFont(string baseFont, float size, PdfFontStyle style, string refName)
         {
             BaseFont = baseFont;
-            IsMatch = isMatch;
             Size = size;
             Style = style;
             RefName = refName;
-        }
-
-        public override bool Equals(object? obj)
-        {
-            if (obj is PdfFont f && f.RefName == RefName && f.Size == Size)
-            {
-                return true;
-            }
-
-            return false;
         }
 
         /// <summary>
@@ -106,7 +99,9 @@ namespace com.etsoo.EasyPdf.Fonts
         {
             if (ObjRef == null) return;
 
-            await BaseFont.WriteAsync(writer, ObjRef, IsMatch ? null : Style);
+            var dic = new PdfStandardFontDic(BaseFont);
+            dic.Obj = ObjRef;
+            await writer.WriteDicAsync(dic);
         }
 
         /// <summary>
@@ -118,39 +113,16 @@ namespace com.etsoo.EasyPdf.Fonts
         /// <returns>Task</returns>
         public async Task WriteAsync(Stream stream, PdfChunk chunk)
         {
-            var length = chunk.Content.Length;
-            var glyfs = new (int GlyphId, float Width)[length];
-            for (var c = 0; c < length; c++)
+            if (chunk.Content.Span.IsAllAscii())
             {
-                var one = (int)chunk.Content.Span[c];
-                if (!cmap.TryGetValue(one, out var citem))
-                {
-                    var glyphId = BaseFont.GetGlyphId(one);
-                    var gwidth = BaseFont.GetGlyphWidth(glyphId);
-
-                    var width = BaseFont.FUnitToLocal(gwidth, Size);
-
-                    // Base font cache
-                    if (!BaseFont.UsedGlyphs.ContainsKey(one)) BaseFont.UsedGlyphs.Add(one, (glyphId, gwidth));
-
-                    // Font cache
-                    cmap[one] = (glyphId, width, gwidth);
-
-                    glyfs[c] = (glyphId, width);
-                }
-                else
-                {
-                    glyfs[c] = (citem.GlyphId, citem.Width);
-                }
+                var content = new PdfString(chunk.Content.ToString());
+                await content.WriteToAsync(stream);
             }
-
-            // Truetype, Identity encoding
-            // Step 1: char code (cid) => glyph index
-            // Step 2: font subset, glyph index to glyph to display
-            // Step 3: ToUnicode reverse glyph index to unicode when read text
-            var newText = string.Concat(glyfs.Select(g => (char)g.GlyphId));
-            var content = new PdfBinaryString(newText);
-            await content.WriteToAsync(stream, false);
+            else
+            {
+                var content = new PdfBinaryString(chunk.Content.ToString());
+                await content.WriteToAsync(stream, false);
+            }
 
             if (chunk.NewLine)
             {

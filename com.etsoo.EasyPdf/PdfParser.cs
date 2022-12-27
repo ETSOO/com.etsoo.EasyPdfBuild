@@ -1,7 +1,7 @@
 ﻿using com.etsoo.EasyPdf.Objects;
 using com.etsoo.EasyPdf.Types;
 using com.etsoo.PureIO;
-using Microsoft.Toolkit.HighPerformance.Buffers;
+using CommunityToolkit.HighPerformance.Buffers;
 using System.Buffers;
 using System.Text;
 

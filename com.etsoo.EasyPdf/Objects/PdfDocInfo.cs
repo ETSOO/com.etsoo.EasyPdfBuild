@@ -1,4 +1,5 @@
 ﻿using com.etsoo.EasyPdf.Types;
+using System.Globalization;
 
 namespace com.etsoo.EasyPdf.Objects
 {
@@ -22,7 +23,7 @@ namespace com.etsoo.EasyPdf.Objects
 
         public DateTime? ModDate { get; set; }
 
-        public string? Language { get; set; }
+        public CultureInfo? Culture { get; set; }
 
         public PdfDocInfo() : base()
         {
